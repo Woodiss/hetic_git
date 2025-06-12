@@ -1,0 +1,11 @@
+[project]
+name = "git_scratch"
+version = "0.1.0"
+description = "Reimplémentation de Git en Python"
+dependencies = [
+    "typer[all]",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
