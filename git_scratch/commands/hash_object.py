@@ -1,4 +1,3 @@
-
 import hashlib
 import os
 import zlib
@@ -6,7 +5,7 @@ import typer
 
 app = typer.Typer()
 
-@app.command()
+# @app.command("hash-object")
 def hash_object(
     file_path: str = typer.Argument(..., help="Path to the file to hash."),
     write: bool = typer.Option(False, "--write", "-w", help="Store object in .git/objects.")
