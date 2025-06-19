@@ -1,0 +1,56 @@
+import json
+import os
+import typer
+import hashlib
+import zlib
+
+def add(file_path: str = typer.Argument(..., help="Path to the file to stage.")):
+    """
+    Adds a file to the staging area (index.json).
+    """
+    if not os.path.isfile(file_path):
+        typer.secho(f"Error: {file_path} is not a valid file.", fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    # Read the file content
+    with open(file_path, "rb") as f:
+        content = f.read()
+
+    # Create the blob object
+    header = f"blob {len(content)}\0".encode()
+    full_data = header + content
+    oid = hashlib.sha1(full_data).hexdigest()
+
+    # Save to .git/objects/
+    obj_dir = os.path.join(".git", "objects", oid[:2])
+    obj_path = os.path.join(obj_dir, oid[2:])
+    os.makedirs(obj_dir, exist_ok=True)
+    with open(obj_path, "wb") as f:
+        f.write(zlib.compress(full_data))
+
+    # Load or create index.json
+    index_path = "index.json"
+    if os.path.exists(index_path) and os.path.getsize(index_path) > 0:
+        with open(index_path, "r") as f:
+            index = json.load(f)
+    else:
+        index = []
+
+    # Create the entry with mode, oid, and path
+    entry = {
+        "mode": "100644",  # standard mode for a normal file
+        "oid": oid,
+        "path": file_path
+    }
+
+    # Remove any existing entry with the same path
+    index = [e for e in index if e["path"] != file_path]
+
+    # Add the new entry
+    index.append(entry)
+
+    # Write to index.json
+    with open(index_path, "w") as f:
+        json.dump(index, f, indent=2)
+
+    typer.echo(f"{file_path} added to index with OID {oid}")
