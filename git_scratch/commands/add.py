@@ -6,7 +6,7 @@ import zlib
 
 def add(file_path: str = typer.Argument(..., help="Path to the file to stage.")):
     """
-    Adds a file to the staging area (index.json).
+    Adds a file to the staging area (.git/index.json).
     """
     if not os.path.isfile(file_path):
         typer.secho(f"Error: {file_path} is not a valid file.", fg=typer.colors.RED)
@@ -28,29 +28,32 @@ def add(file_path: str = typer.Argument(..., help="Path to the file to stage."))
     with open(obj_path, "wb") as f:
         f.write(zlib.compress(full_data))
 
-    # Load or create index.json
-    index_path = "index.json"
+    # Load or create .git/index.json
+    index_path = os.path.join(".git", "index.json")
     if os.path.exists(index_path) and os.path.getsize(index_path) > 0:
         with open(index_path, "r") as f:
             index = json.load(f)
     else:
         index = []
 
+    # Use relative path (optional, depends où tu exécutes)
+    rel_path = os.path.relpath(file_path)
+
     # Create the entry with mode, oid, and path
     entry = {
         "mode": "100644",  # standard mode for a normal file
         "oid": oid,
-        "path": file_path
+        "path": rel_path
     }
 
     # Remove any existing entry with the same path
-    index = [e for e in index if e["path"] != file_path]
+    index = [e for e in index if e["path"] != rel_path]
 
     # Add the new entry
     index.append(entry)
 
-    # Write to index.json
+    # Write to .git/index.json
     with open(index_path, "w") as f:
         json.dump(index, f, indent=2)
 
-    typer.echo(f"{file_path} added to index with OID {oid}")
+    typer.echo(f"{rel_path} added to index with OID {oid}")

@@ -6,54 +6,24 @@ from git_scratch.main import app
 
 runner = CliRunner()
 
-def test_cat_file_matches_git(tmp_path):
+def test_cat_file_all_modes(tmp_path):
     file = tmp_path / "hello.txt"
     file.write_text("Hello from test")
 
-    result_git_oid = subprocess.run(
-        ["git", "hash-object", "-w", str(file)],
-        capture_output=True, text=True
-    )
-    oid = result_git_oid.stdout.strip()
+    # 🔄 Calcul du hash avec l'application locale (PIT) au lieu de Git
+    result_pit_oid = runner.invoke(app, ["hash-object", str(file)])
+    oid = result_pit_oid.stdout.strip()
 
-    runner.invoke(app, ["hash-object", str(file)])
+    # Test des deux modes : -p (print content) et -t (type)
+    for flag in ["-p", "-t"]:
+        result_git = subprocess.run(
+            ["git", "cat-file", flag, oid],
+            capture_output=True, text=True
+        )
+        result_pit = runner.invoke(app, ["cat-file", flag, oid])
 
-    result_git_cat = subprocess.run(
-        ["git", "cat-file", "-p", oid],
-        capture_output=True, text=True
-    )
-    result_pit_cat = runner.invoke(app, ["cat-file", "-p", oid])
+        print(f"\n[cat-file {flag}]")
+        print("GIT:", repr(result_git.stdout))
+        print("PIT:", repr(result_pit.stdout))
 
-    #  Affichage des résultats pour inspection
-    print("\n[cat-file -p]")
-    print("GIT:", repr(result_git_cat.stdout))
-    print("PIT:", repr(result_pit_cat.stdout))
-
-    assert result_git_cat.stdout.strip() == result_pit_cat.stdout.strip()
-
-
-def test_cat_file_type_matches_git(tmp_path):
-    file = tmp_path / "hello.txt"
-    file.write_text("Hello from test")
-
-    result_git_oid = subprocess.run(
-        ["git", "hash-object", "-w", str(file)],
-        capture_output=True, text=True
-    )
-    oid = result_git_oid.stdout.strip()
-
-    runner.invoke(app, ["hash-object", str(file)])
-
-    result_git_type = subprocess.run(
-        ["git", "cat-file", "-t", oid],
-        capture_output=True, text=True
-    )
-    result_pit_type = runner.invoke(app, ["cat-file", "-t", oid])
-
-    #  Affichage des résultats pour inspection
-    print("\n[cat-file -t]")
-    print("git:", repr(result_git_type.stdout))
-    print("pit:", repr(result_pit_type.stdout))
-
-    assert result_git_type.stdout.strip() == result_pit_type.stdout.strip()
-
+        assert result_git.stdout.strip() == result_pit.stdout.strip()
