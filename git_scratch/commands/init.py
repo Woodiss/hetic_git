@@ -1,7 +1,6 @@
 import os
 import typer
 
-app = typer.Typer()
 
 def init(
     folder: str = typer.Argument(None, help="Path to the folder where to initialize the repository")
