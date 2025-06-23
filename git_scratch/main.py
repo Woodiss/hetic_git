@@ -8,6 +8,7 @@ app = typer.Typer(help="Git from scratch in Python.")
 
 app.command("hash-object")(hash_object)
 app.command("cat-file")(cat_file)
+app.command("init")(init)
 app.command("ls-files")(ls_files)
 
 
