@@ -2,6 +2,7 @@ import typer
 from git_scratch.commands.ls_files import ls_files
 from git_scratch.commands.hash_object import hash_object
 from git_scratch.commands.cat_file import cat_file
+from git_scratch.commands.init import init
 
 app = typer.Typer(help="Git from scratch in Python.")
 
