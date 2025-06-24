@@ -10,20 +10,24 @@ You will implement a subset of Git commands, both low-level (plumbing) and user-
 
 ## 🛠 Plumbing Commands
 
-### `git hash-object <file>`
+### `git hash-object [-w] <file>`
+
 - **Creates a blob** object from file content and writes its SHA-1 to stdout.
 - ❌ Reject directories or missing files.
 
 ### `git cat-file -t|-p <oid>`
+
 - `-t`: Print object type.
 - `-p`: Pretty-print blob/tree/commit content.
 - ❌ Reject invalid OIDs or missing options.
 
 ### `git write-tree`
+
 - Create a tree object from the staging area.
 - Writes SHA-1 of the tree to stdout.
 
 ### `git commit-tree <tree_sha> -m "msg" [-p <parent>]`
+
 - Creates a commit object pointing to a tree (and parent commit if any) and writes its oid to stdout
 - Requires `-m` message.
 - ❌ No annotated tags.
@@ -33,48 +37,60 @@ You will implement a subset of Git commands, both low-level (plumbing) and user-
 ## 🧑‍💻 Porcelain Commands
 
 ### `git init [<dir>]`
+
 - Initializes a Git repository in the given directory.
 - Create .git/objects, .git/refs/heads, HEAD, and minimal config
 
 ### `git add <file>…`
+
 - Adds files to the staging area (not directories).
 - ❌ No `-p`, no wildcards.
 
 ### `git rm <file>…`
+
 - Removes a file from working directory and index.
 
 ### `git commit -m "msg"`
+
 - Runs `write-tree`, creates a commit with HEAD as parent.
 - ❌ No editor or message prompt.
 
 ### `git status`
+
 - Shows staged and unstaged changes.
 
 ### `git checkout [-b] <branch|sha>`
+
 - Switch to existing commit or branch.
 - `-b <branch>` creates a new branch.
 - Change HEAD, update working dir, check for conflicts
 
 ### `git reset [--soft|--mixed|--hard] <sha>`
+
 - `--soft`: move HEAD
 - `--mixed`: + reset index
 - `--hard`: + reset working directory
 - ❌ No file-specific reset.
 
 ### `git log`
+
 - Print commit history from HEAD (one-line summary ok).
 
 ### `git ls-files`
+
 - List all files in the index.
 
 ### `git ls-tree <tree_sha>`
+
 - List contents of a tree object.
 
 ### `git rev-parse <ref>`
+
 - Convert ref/branch/HEAD into SHA-1.
 - ❌ No complex selectors
 
 ### `git show-ref`
+
 - List all refs and their hashes.
 
 ---
@@ -82,6 +98,7 @@ You will implement a subset of Git commands, both low-level (plumbing) and user-
 ## 🧠 Advanced Feature: Merge Support
 
 ### `git merge <branch|sha>`
+
 - Perform 3-way merge and create a merge commit with 2 parents.
 - On conflict: insert `<<<<<<<`, `=======`, `>>>>>>>` markers into file(s).
 - ❌ No rebase, squash, or fast-forward-only merges.
