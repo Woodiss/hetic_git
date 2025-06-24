@@ -4,11 +4,11 @@ version = "0.1.0"
 description = "Reimplémentation de Git en Python"
 dependencies = [
     "typer[all]",
+    "pytest"
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
-
 
 [build-system]
 requires = ["setuptools>=61.0"]
