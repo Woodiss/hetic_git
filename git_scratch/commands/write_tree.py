@@ -55,11 +55,11 @@ def build_tree(entries: List[Dict], base_path: str = "") -> bytes:
 @app.command()
 def write_tree():
     """
-    Écrit un arbre Git récursif à partir de .git/index.json et affiche son OID.
+    Writes a recursive Git tree from .git/index.json and displays its OID.
     """
     index_path = os.path.join(".git", "index.json")
     if not os.path.exists(index_path):
-        typer.secho("Erreur : .git/index.json introuvable.", fg=typer.colors.RED)
+        typer.secho("Erreur : .git/index.json not found..", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
     with open(index_path, "r") as f:
