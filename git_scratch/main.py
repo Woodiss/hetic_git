@@ -5,6 +5,8 @@ from git_scratch.commands.cat_file import cat_file
 from git_scratch.commands.add import add
 from git_scratch.commands.write_tree import write_tree
 from git_scratch.commands.rmfile import rmfile
+from git_scratch.commands.commit_tree import commit_tree
+
 
 from git_scratch.commands.init import init
 
@@ -17,6 +19,8 @@ app.command("write-tree")(write_tree)
 app.command("rm")(rmfile)
 app.command("init")(init)
 app.command("ls-files")(ls_files)
+app.command("commit-tree")(commit_tree)
+
 
 
 if __name__ == "__main__":
