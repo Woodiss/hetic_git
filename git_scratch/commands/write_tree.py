@@ -1,13 +1,15 @@
+
 import os
-import json
 import hashlib
 import zlib
 import typer
 from typing import List, Dict, Tuple
-
-app = typer.Typer()
+from git_scratch.utils.index_utils import load_index
 
 def store_object(data: bytes, type_: str) -> str:
+    """
+    Stocke un objet Git compressé et retourne son OID (SHA-1).
+    """
     header = f"{type_} {len(data)}\0".encode()
     full_data = header + data
     oid = hashlib.sha1(full_data).hexdigest()
@@ -52,22 +54,16 @@ def build_tree(entries: List[Dict], base_path: str = "") -> bytes:
 
     return result
 
-@app.command()
 def write_tree():
     """
     Writes a recursive Git tree from .git/index.json and displays its OID.
     """
-    index_path = os.path.join(".git", "index.json")
-    if not os.path.exists(index_path):
-        typer.secho("Erreur : .git/index.json not found..", fg=typer.colors.RED)
+    index = load_index()
+    if not index:
+        typer.secho("Erreur : .git/index.json not found or empty.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
-
-    with open(index_path, "r") as f:
-        index = json.load(f)
 
     tree_data = build_tree(index)
     oid = store_object(tree_data, "tree")
     typer.echo(f"Tree OID: {oid}")
 
-if __name__ == "__main__":
-    app()
