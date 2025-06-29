@@ -1,6 +1,6 @@
 
 import typer
-from git_scratch.utils import read_object  # Assure-toi que le chemin est correct
+from git_scratch.utils.read_object import read_object  # Assure-toi que le chemin est correct
 
 def cat_file(
     oid: str = typer.Argument(..., help="SHA-1 object ID to inspect."),
