@@ -1,25 +1,17 @@
-import json
+
 import os
 import typer
 import hashlib
 import zlib
-import stat
+from git_scratch.utils.index_utils import load_index, save_index, compute_mode
 
 app = typer.Typer()
-
-def compute_mode(file_path):
-    st = os.stat(file_path)
-    if stat.S_ISLNK(st.st_mode):
-        return "120000"
-    elif st.st_mode & stat.S_IXUSR:
-        return "100755"
-    else:
-        return "100644"
 
 def add_file_to_index(file_path: str):
     with open(file_path, "rb") as f:
         content = f.read()
 
+    # Prépare et compresse l’objet blob
     header = f"blob {len(content)}\0".encode()
     full_data = header + content
     oid = hashlib.sha1(full_data).hexdigest()
@@ -30,13 +22,8 @@ def add_file_to_index(file_path: str):
     with open(obj_path, "wb") as f:
         f.write(zlib.compress(full_data))
 
-    index_path = os.path.join(".git", "index.json")
-    if os.path.exists(index_path) and os.path.getsize(index_path) > 0:
-        with open(index_path, "r") as f:
-            index = json.load(f)
-    else:
-        index = []
-
+    # Charge et modifie l’index
+    index = load_index()
     rel_path = os.path.relpath(file_path)
     mode = compute_mode(file_path)
 
@@ -49,9 +36,7 @@ def add_file_to_index(file_path: str):
     index = [e for e in index if e["path"] != rel_path]
     index.append(entry)
 
-    with open(index_path, "w") as f:
-        json.dump(index, f, indent=2)
-
+    save_index(index)
     typer.echo(f"{rel_path} added to index with OID {oid} and mode {mode}")
 
 @app.command()
@@ -80,3 +65,4 @@ def add(file_path: str = typer.Argument(..., help="Path to file or directory to 
 
 if __name__ == "__main__":
     app()
+
