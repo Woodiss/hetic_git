@@ -1,6 +1,6 @@
 
 import typer
-from git_scratch.utils import read_object
+from git_scratch.utils.read_object import read_object
 
 def ls_tree(
     oid: str = typer.Argument(..., help="OID of the tree object")
@@ -34,5 +34,6 @@ def ls_tree(
         oid_raw = content[i:i+20]
         oid_hex = oid_raw.hex()
         i += 20
-
-        typer.echo(f"{mode} {oid_hex} {name}")
+        
+        obj_type = "blob" if mode.startswith("10") else "tree"
+        typer.echo(f"{mode} {obj_type} {oid_hex}\t{name}")
