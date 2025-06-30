@@ -1,5 +1,5 @@
-
 import typer
+from git_scratch.utils.read_object import read_object
 
 def error(msg: str):
     typer.secho(f"Error: {msg}", fg=typer.colors.RED)
@@ -35,27 +35,12 @@ def cat_file(
     if len(oid) != 40 or not all(c in "0123456789abcdef" for c in oid.lower()):
         error(f"Invalid OID format: {oid}")
 
-    obj_path = os.path.join(".git", "objects", oid[:2], oid[2:])
-    if not os.path.exists(obj_path):
-        error(f"Object {oid} not found in .git/objects.")
-
     try:
-        with open(obj_path, "rb") as f:
-            full_data = zlib.decompress(f.read())
-    except zlib.error:
-        error("Failed to decompress Git object.")
-
-    try:
-        header_end = full_data.index(b'\x00')
-        header = full_data[:header_end].decode()
-        content = full_data[header_end + 1:]
-        obj_type, size_str = header.split()
-        size = int(size_str)
+        obj_type, content = read_object(oid)
+    except FileNotFoundError:
+        error(f"Object {oid} not found.")
     except Exception:
-        error("Invalid Git object format.")
-
-    if len(content) != size:
-        error("Size mismatch in object.")
+        error("Failed to read Git object.")
 
     if type_opt:
         typer.echo(obj_type)
