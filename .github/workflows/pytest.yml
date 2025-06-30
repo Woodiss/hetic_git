@@ -1,0 +1,42 @@
+name: Tests Python
+
+on:
+  push:
+    branches: ["**"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Récupération du code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Git identity
+        run: |
+          git config --global user.name  "CI Bot"
+          git config --global user.email "ci@example.com"
+
+      # 2) Installation de Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.0"
+
+      # 3) Mettre en cache le dossier pip (accélère les exécutions)
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.cfg', 'setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4) Installer les dépendances
+      - name: Install dependencies
+        run: pip install -e .
+
+      # 5) Lancer les tests
+      - name: Run pytest
+        run: pytest

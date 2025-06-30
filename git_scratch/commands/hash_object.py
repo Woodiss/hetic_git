@@ -1,7 +1,6 @@
-import hashlib
 import os
-import zlib
 import typer
+from git_scratch.utils.hash import compute_blob_hash, write_object
 
 def hash_object(
     file_path: str = typer.Argument(..., help="Path to the file to hash."),
@@ -17,16 +16,9 @@ def hash_object(
     with open(file_path, 'rb') as f:
         content = f.read()
 
-    header = f"blob {len(content)}\0".encode()
-    full_data = header + content
-    oid = hashlib.sha1(full_data).hexdigest()
+    oid, full_data = compute_blob_hash(content)
 
     if write:
-        obj_dir = os.path.join(".git", "objects", oid[:2])
-        obj_path = os.path.join(obj_dir, oid[2:])
-        os.makedirs(obj_dir, exist_ok=True)
-        with open(obj_path, "wb") as f:
-            f.write(zlib.compress(full_data))
+        write_object(oid, full_data)
 
     typer.echo(oid)
-

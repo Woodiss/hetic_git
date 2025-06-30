@@ -1,5 +1,4 @@
-import os
-import zlib
+
 import typer
 
 def error(msg: str):
