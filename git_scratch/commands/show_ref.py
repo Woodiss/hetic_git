@@ -10,6 +10,9 @@ def resolve_ref(path):
     return content
 
 def show_ref():
+    """
+    List references in a local repository
+    """
     refs = {}
 
     # Refs dans .git/refs
