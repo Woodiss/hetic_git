@@ -1,5 +1,5 @@
 from typing import Optional
-from git_scratch.utils.pit_identity import get_author_identity, get_timestamp_info
+from hetic_git.git_scratch.utils.identity import get_author_identity, get_timestamp_info
 from git_scratch.utils.write_object import write_object
 
 

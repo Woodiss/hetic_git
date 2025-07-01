@@ -1,5 +1,5 @@
 import typer
-from git_scratch.utils.logique_commit_tree import build_commit_object
+from hetic_git.git_scratch.utils.commit import build_commit_object
 
 def commit_tree(
     tree_oid: str = typer.Argument(..., help="OID of the tree object."),
