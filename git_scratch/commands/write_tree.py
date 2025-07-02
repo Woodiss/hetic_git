@@ -65,5 +65,5 @@ def write_tree():
 
     tree_data = build_tree(index)
     oid = store_object(tree_data, "tree")
-    typer.echo(oid)
+    typer.echo(f"Tree OID: {oid}")
 
