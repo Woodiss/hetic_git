@@ -20,7 +20,7 @@ def show_ref():
     for root, _, files in os.walk(refs_dir):
         for file in files:
             ref_path = os.path.join(root, file)
-            rel_path = os.path.relpath(ref_path, ".git")
+            rel_path = os.path.relpath(ref_path, ".git").replace(os.sep, "/")
             oid = resolve_ref(ref_path)
             refs[rel_path] = oid
 
