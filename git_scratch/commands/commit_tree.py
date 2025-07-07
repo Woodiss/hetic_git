@@ -9,5 +9,18 @@ def commit_tree(
     """
     Create a commit object pointing to a tree and optional parent commit.
     """
-    oid = build_commit_object(tree_oid=tree_oid, message=message, parent_oid=parent)
-    typer.echo(oid)
+    try:
+        oid = build_commit_object(tree_oid=tree_oid, message=message, parent_oid=parent)
+        typer.echo(oid)
+    except ValueError as e:
+        
+        typer.secho(f"Error: {e}\n\n"
+                    "Please configure your user identity:\n"
+                    '  git config --global user.email "you@example.com"\n'
+                    '  git config --global user.name "Your Name"\n'
+                    "Omit --global to set the identity only in this repository.",
+                    fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.secho(f"An unexpected error occurred: {e}", fg=typer.colors.RED)
+        raise typer.Exit(code=1)

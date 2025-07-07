@@ -24,8 +24,7 @@ def write_object(content: bytes, obj_type: str) -> str:
     file_path = os.path.join(dir_path, oid[2:])
 
     if os.path.exists(file_path):
-        print(f"[write_object] Object {oid} already exists.")
-        
+        return oid
 
     os.makedirs(dir_path, exist_ok=True)
     with open(file_path, "wb") as f:

@@ -1,6 +1,6 @@
 from typing import Optional
 from git_scratch.utils.identity import get_author_identity, get_timestamp_info
-from git_scratch.utils.write_object import write_object
+from git_scratch.utils.object import write_object
 
 
 def build_commit_object(
