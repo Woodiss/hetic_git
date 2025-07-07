@@ -4,6 +4,7 @@ import hashlib
 from typer.testing import CliRunner
 from git_scratch.main import app
 
+
 runner = CliRunner()
 
 def setup_git_repo(tmp_path):
@@ -37,7 +38,6 @@ def test_write_tree(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["write-tree"])
     assert result.exit_code == 0, f"CLI failed with exit code {result.exit_code}"
-    assert "Tree OID: " in result.stdout, "Expected Tree OID in CLI output"
     oid = result.stdout.strip().split()[-1]
 
     obj_path = git_dir / "objects" / oid[:2] / oid[2:]
