@@ -8,6 +8,7 @@ from git_scratch.commands.write_tree import write_tree
 from git_scratch.commands.rmfile import rmfile
 from git_scratch.commands.rev_parse import rev_parse
 from git_scratch.commands.ls_tree import ls_tree
+from git_scratch.commands.status import status
 
 from git_scratch.commands.init import init
 
@@ -23,6 +24,7 @@ app.command("ls-files")(ls_files)
 app.command("rev-parse")(rev_parse)
 app.command("show-ref")(show_ref)
 app.command("ls-tree")(ls_tree)
+app.command("status")(status)
 
 
 if __name__ == "__main__":
