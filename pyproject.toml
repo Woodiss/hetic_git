@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Reimplémentation de Git en Python"
 dependencies = [
     "typer[all]",
-    "pytest"
+    "pytest",
+    "pathspec"
 ]
 
 [project.optional-dependencies]
