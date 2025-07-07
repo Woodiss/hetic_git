@@ -1,6 +1,8 @@
 import os
 import typer
-from git_scratch.utils.hash import compute_blob_hash, write_object
+from git_scratch.utils.object import write_object
+from git_scratch.utils.hash import compute_blob_hash
+
 
 def hash_object(
     file_path: str = typer.Argument(..., help="Path to the file to hash."),
@@ -15,10 +17,9 @@ def hash_object(
 
     with open(file_path, 'rb') as f:
         content = f.read()
-
-    oid, full_data = compute_blob_hash(content)
-
+        
+    oid, _ = compute_blob_hash(content)
     if write:
-        write_object(oid, full_data)
+        write_object(content, "blob")
 
     typer.echo(oid)

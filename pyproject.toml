@@ -5,6 +5,7 @@ description = "Reimplémentation de Git en Python"
 dependencies = [
     "typer[all]",
     "pytest",
+    "configparser",
     "pathspec"
 ]
 
