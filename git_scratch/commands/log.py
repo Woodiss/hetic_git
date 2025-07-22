@@ -34,6 +34,9 @@ def parse_commit(content: bytes) -> dict:
 
 
 def log():
+    """
+    Show commit logs
+    """
     try:
         head_path = os.path.join(".git", "HEAD")
         with open(head_path) as f:
