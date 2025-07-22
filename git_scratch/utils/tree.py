@@ -2,6 +2,7 @@
 import os
 from typing import List, Dict, Tuple
 from git_scratch.utils.object import write_object
+from git_scratch.utils.index_utils import load_index
 
 
 def build_tree(entries: List[Dict], base_path: str = "") -> bytes:
@@ -34,3 +35,21 @@ def build_tree(entries: List[Dict], base_path: str = "") -> bytes:
         result += f"{mode} {name}".encode() + b"\x00" + oid
 
     return result
+
+def create_root_tree_object() -> str:
+    """
+    Loads the index, recursively builds the root Git tree object,
+    stores it, and returns its OID.
+    This function orchestrates the creation of the complete tree.
+    """
+    index_entries = load_index()
+    if not index_entries:
+        raise ValueError("Index is empty or not found. Nothing to commit.")
+
+    # Utilise la fonction build_tree existante pour obtenir le contenu binaire du tree racine pour l'arbre racine, base_path est vide
+    tree_content_bytes = build_tree(index_entries, base_path="")
+    
+    # Stocke cet objet tree racine dans le dépôt Git
+    tree_oid = write_object(tree_content_bytes, "tree")
+    
+    return tree_oid
