@@ -1,9 +1,12 @@
-
 import typer
 import os
+import time
 from git_scratch.utils.read_object import read_object
 
 def parse_commit(content: bytes) -> dict:
+    """
+    Parse un objet commit et retourne ses métadonnées.
+    """
     lines = content.decode().split("\n")
     commit_data = {
         "tree": None,
@@ -25,7 +28,7 @@ def parse_commit(content: bytes) -> dict:
         elif line.startswith("committer "):
             commit_data["committer"] = line[10:]
         elif line == "":
-            # Message starts after the empty line
+            # Le message commence après la ligne vide
             commit_data["message"] = "\n".join(lines[i+1:]).strip()
             break
         i += 1
@@ -33,9 +36,18 @@ def parse_commit(content: bytes) -> dict:
     return commit_data
 
 
+def format_git_date(timestamp: str, tz_offset: str) -> str:
+    """
+    Convertit un timestamp UNIX + offset en format git log.
+    """
+    t = time.localtime(int(timestamp))
+    # Format identique à `git log`
+    return time.strftime("%a %b %d %H:%M:%S %Y", t) + f" {tz_offset}"
+
+
 def log():
     """
-    Show commit logs
+    Réimplémente `git log` en lisant les commits dans .git/objects.
     """
     try:
         head_path = os.path.join(".git", "HEAD")
@@ -60,9 +72,6 @@ def log():
         typer.secho("No commits found or repository not initialized.", fg=typer.colors.RED)
         return
 
-    # Affiche l'oid pour vérifier
-    typer.echo(f"Starting from commit OID: {oid}")
-
     while oid:
         try:
             obj_type, content = read_object(oid)
@@ -76,10 +85,18 @@ def log():
 
         commit = parse_commit(content)
 
-        typer.secho(f"commit {oid}", fg=typer.colors.GREEN)
-        typer.echo(f"Author: {commit['author']}")
-        typer.echo("")
+        # Récupère l'auteur + timestamp
+        author_parts = commit["author"].rsplit(" ", 2)
+        author_name = author_parts[0]
+        timestamp = author_parts[1]
+        tz_offset = author_parts[2]
+
+        date_str = format_git_date(timestamp, tz_offset)
+
+        # Format identique à git log
+        typer.echo(f"commit {oid}")
+        typer.echo(f"Author: {author_name}")
+        typer.echo(f"Date:   {date_str}\n")
         typer.echo(f"    {commit['message']}\n")
 
         oid = commit["parent"]
-

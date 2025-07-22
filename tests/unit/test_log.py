@@ -1,56 +1,64 @@
-
+import os
 import subprocess
+from pathlib import Path
 from typer.testing import CliRunner
-
-# On importe ta commande Typer (par exemple depuis git_scratch.main)
 from git_scratch.main import app  # adapte selon où est défini ton Typer app
 
 runner = CliRunner()
 
-def run(cmd, cwd):
-    """Helper pour exécuter une commande shell et retourner stdout."""
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
-    return result.stdout.strip()
+def init_test_repo(tmp_path: Path):
+    """
+    Initialise un repo git temporaire avec 2 commits.
+    """
+    os.chdir(tmp_path)
 
-def test_pit_log_matches_git_with_typer(monkeypatch, tmp_path):
-    # 1️⃣ Créer un repo temporaire
-    repo_path = tmp_path / "repo"
-    repo_path.mkdir()
-    
-    # Initialiser un repo Git
-    run(["git", "init"], cwd=repo_path)
-    
-    # Faire quelques commits
-    f1 = repo_path / "file1.txt"
-    f1.write_text("hello world")
-    run(["git", "add", "file1.txt"], cwd=repo_path)
-    run(["git", "commit", "-m", "Initial commit"], cwd=repo_path)
-    
-    f1.write_text("update content")
-    run(["git", "add", "file1.txt"], cwd=repo_path)
-    run(["git", "commit", "-m", "Second commit"], cwd=repo_path)
-    
-    f2 = repo_path / "file2.txt"
-    f2.write_text("another file")
-    run(["git", "add", "file2.txt"], cwd=repo_path)
-    run(["git", "commit", "-m", "Third commit"], cwd=repo_path)
-    
-    # 2️⃣ Récupérer le log git dans un format simple
-    git_log = run(["git", "log", "--pretty=format:%H %s"], cwd=repo_path)
-    
-    # 3️⃣ Monkeypatcher le répertoire courant pour que pit log s’exécute dans repo_path
-    monkeypatch.chdir(repo_path)
-    
-    # 4️⃣ Exécuter `pit log` via Typer Testing
+    # Init repo
+    subprocess.run(["git", "init"], check=True)
+
+    # Commit 1
+    (tmp_path / "file1.txt").write_text("Hello World")
+    subprocess.run(["git", "add", "file1.txt"], check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test User", "-c", "user.email=test@example.com",
+         "commit", "-m", "Initial commit"],
+        check=True
+    )
+
+    # Commit 2
+    (tmp_path / "file2.txt").write_text("Another file")
+    subprocess.run(["git", "add", "file2.txt"], check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test User", "-c", "user.email=test@example.com",
+         "commit", "-m", "Second commit"],
+        check=True
+    )
+
+
+def test_pit_log_matches_git_log(tmp_path):
+    # 1. Créer un repo de test avec deux commits
+    init_test_repo(tmp_path)
+
+    # 2. Récupère la sortie officielle de git log
+    git_output = subprocess.run(
+        ["git", "log", "--no-decorate", "--no-color"],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=tmp_path
+    ).stdout.strip()
+
+    # 3. Exécute pit log dans le même repo
+    # On change le cwd pour être dans le repo test
+    os.chdir(tmp_path)
     result = runner.invoke(app, ["log"])
-    
-    assert result.exit_code == 0, f"pit log failed: {result.output}"
-    
-    pit_log_output = result.output
-    
-    # 5️⃣ Comparer les commits git avec ceux affichés par pit
-    for line in git_log.splitlines():
-        commit_hash, message = line.split(" ", 1)
-        # On vérifie que pit log contient bien le hash et le message
-        assert commit_hash in pit_log_output
-        assert message in pit_log_output
+    pit_output = result.stdout.strip()
+
+    # Debug si ça diffère
+    if git_output != pit_output:
+        print("\n=== GIT LOG ===")
+        print(git_output)
+        print("\n=== PIT LOG ===")
+        print(pit_output)
+
+    # 4. Vérifie que les deux sorties sont identiques
+    assert pit_output == git_output
