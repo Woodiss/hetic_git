@@ -12,6 +12,8 @@ from git_scratch.commands.commit_tree import commit_tree
 from git_scratch.commands.porcelain_commit import commit
 
 
+from git_scratch.commands.status import status
+from git_scratch.commands.log import log
 from git_scratch.commands.init import init
 
 app = typer.Typer(help="Git from scratch in Python.")
@@ -30,6 +32,8 @@ app.command("commit-tree")(commit_tree)
 app.command("commit")(commit)
 
 
+app.command("status")(status)
+app.command("log")(log)
 
 if __name__ == "__main__":
     app()
