@@ -12,6 +12,7 @@ from git_scratch.commands.commit_tree import commit_tree
 from git_scratch.commands.status import status
 from git_scratch.commands.log import log
 from git_scratch.commands.init import init
+from git_scratch.commands.reset import reset
 
 app = typer.Typer(help="Git from scratch in Python.")
 
@@ -28,6 +29,7 @@ app.command("ls-tree")(ls_tree)
 app.command("commit-tree")(commit_tree)
 app.command("status")(status)
 app.command("log")(log)
+app.command("reset")(reset)
 
 if __name__ == "__main__":
     app()
