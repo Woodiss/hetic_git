@@ -3,6 +3,8 @@ import os
 import shutil
 import typer
 from git_scratch.utils.checkout_utils import write_ref, list_working_dir_files, detect_dirty_workdir, read_tree, read_object, get_oid_from_ref, get_commit_tree, resolve_target_to_oid, restore_working_dir
+from git_scratch.commands.reset import _get_tree_oid, entries_from_tree
+from git_scratch.utils.index_utils import save_index
 
 def resolve_target_to_oid(target: str) -> str | None:
     """
@@ -66,6 +68,13 @@ def write_HEAD_ref(value: str):
 def is_branch(name: str) -> bool:
     return os.path.exists(os.path.join(".git", "refs", "heads", name))
 
+def update_index_from_commit(commit_oid: str):
+    """
+    Met à jour l'index.json en fonction du tree du commit.
+    """
+    tree_oid = _get_tree_oid(commit_oid)
+    new_index = entries_from_tree(tree_oid)
+    save_index(new_index)
 
 def checkout(
     target: str = typer.Argument(None, help="Branch or commit to checkout"),
@@ -101,6 +110,7 @@ def checkout(
         typer.secho(f"Switched to a new branch '{new_branch}'", fg=typer.colors.GREEN)
         # On restaure le workdir du commit
         restore_working_dir(base_oid)
+        update_index_from_commit(base_oid)
         return
 
     # --- Sinon, checkout normal ---
@@ -109,6 +119,11 @@ def checkout(
         raise typer.Exit(1)
 
     oid = resolve_target_to_oid(target)
+
+    # 🔴 Gestion du cas inexistant
+    if oid is None:
+        typer.secho(f"error: pathspec '{target}' did not match any branch or commit", fg=typer.colors.RED)
+        raise typer.Exit(1)
 
     # Vérifier dirty working dir
     if detect_dirty_workdir():
@@ -127,4 +142,4 @@ def checkout(
 
     typer.secho(f"Checked out {target}", fg=typer.colors.GREEN)
     restore_working_dir(oid)
-
+    update_index_from_commit(oid)
