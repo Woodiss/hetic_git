@@ -43,6 +43,13 @@ def git_and_pit_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         # 5. Ajouter avec git add via subprocess (pas besoin de pit ici)
         subprocess.run(["git", "add", "test.txt"], check=True)
 
+
+        # 7. Commit git via subprocess (pour garder contrôle)
+        subprocess.run([
+            "git", "-c", "user.name=Test", "-c", "user.email=test@test.com",
+            "commit", "-m", "hello"
+        ], check=True)
+
         # 8. Monkeypatch env pour Pit commit
         monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
         monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@test.com")
@@ -53,13 +60,6 @@ def git_and_pit_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         # 9. Commit pit via CLI
         result = runner.invoke(app, ["commit", "-m", "hello"])
         assert result.exit_code == 0, f"Pit commit failed: {result.stderr}"
-
-        # 7. Commit git via subprocess (pour garder contrôle)
-        subprocess.run([
-            "git", "-c", "user.name=Test", "-c", "user.email=test@test.com",
-            "commit", "-m", "hello"
-        ], check=True)
-
 
         yield tmp_path
 

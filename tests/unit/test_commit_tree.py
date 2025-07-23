@@ -32,10 +32,10 @@ def git_and_pit_repo_for_commit_tree(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
         # Create a test file and add it to the index
         (tmp_path / "test.txt").write_text("Hello commit-tree\n")
-        subprocess.run(["git", "add", "test.txt"], check=True)
-
         result = runner.invoke(app, ["add", "test.txt"])
         assert result.exit_code == 0, f"Pit add failed: {result.stderr}"
+        subprocess.run(["git", "add", "test.txt"], check=True)
+
 
         # Commit with git to have a baseline commit
         subprocess.run([
