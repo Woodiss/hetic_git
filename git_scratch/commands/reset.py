@@ -5,7 +5,7 @@ from typing import List
 import typer
 
 from git_scratch.utils.read_object import read_object
-from git_scratch.utils.porcelain_commit import update_head_to_commit
+from git_scratch.utils.refs import update_head_to_commit
 from git_scratch.utils.index_utils import save_index
 from git_scratch.utils.tree_walker import entries_from_tree
 
