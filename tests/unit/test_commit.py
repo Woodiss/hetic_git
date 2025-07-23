@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 import pytest
 from typer.testing import CliRunner
-from git_scratch.main import app 
+from git_scratch.main import app
 
 runner = CliRunner()
 
@@ -15,7 +15,16 @@ def git_and_pit_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         # 1. Init Git repo via subprocess (plus fiable pour git natif)
         subprocess.run(["git", "init"], check=True)
 
-        # 2. Configure Git user for commit (important avant commit)
+        # 1bis. Fix permissions sur .git et sous-dossiers/fichiers pour éviter PermissionError
+        git_dir = tmp_path / ".git"
+        os.chmod(tmp_path, 0o755)
+        for root, dirs, files in os.walk(git_dir):
+            for d in dirs:
+                os.chmod(Path(root) / d, 0o755)
+            for f in files:
+                os.chmod(Path(root) / f, 0o644)
+
+        # 2. Configure Git user pour commit (important avant commit)
         subprocess.run(["git", "config", "user.name", "Test"], check=True)
         subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
 

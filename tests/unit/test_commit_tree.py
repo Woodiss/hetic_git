@@ -17,6 +17,15 @@ def git_and_pit_repo_for_commit_tree(tmp_path: Path, monkeypatch: pytest.MonkeyP
         subprocess.run(["git", "config", "user.name", "Test"], check=True)
         subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
 
+        # Fix permissions sur .git et sous-dossiers/fichiers pour éviter PermissionError
+        git_dir = tmp_path / ".git"
+        os.chmod(tmp_path, 0o755)
+        for root, dirs, files in os.walk(git_dir):
+            for d in dirs:
+                os.chmod(Path(root) / d, 0o755)
+            for f in files:
+                os.chmod(Path(root) / f, 0o644)
+
         # Init pit repo via CLI
         result = runner.invoke(app, ["init"])
         assert result.exit_code == 0, f"Pit init failed: {result.stderr}"
