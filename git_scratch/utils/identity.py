@@ -1,9 +1,8 @@
 # git_scratch/pit_identity.py
 import os
 import configparser
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Tuple
-import typer
 from pathlib import Path
 
 def get_author_identity() -> Tuple[str, str]:
@@ -44,14 +43,34 @@ def get_author_identity() -> Tuple[str, str]:
     return name, email
 
 
-def get_timestamp_info() -> Tuple[int, str]:
+def get_timestamp_info(is_committer: bool = False) -> tuple[int, str]:
     """
-    Retrieve the current timestamp and timezone offset in Git's format.
+    Returns the timestamp and timezone for the commit.
+    """
+    env_date_var = "GIT_COMMITTER_DATE" if is_committer else "GIT_AUTHOR_DATE"
+    date_str = os.environ.get(env_date_var)
     
-    Returns:
-        Tuple[int, str]: Timestamp (seconds since epoch) and timezone offset (e.g., "+0100").
-    """
+    if date_str:
+        parts = date_str.split(' ')
+        if len(parts) == 2:
+            try:
+                timestamp = int(parts[0])
+                tz_offset = parts[1]
+                if len(tz_offset) == 5 and (tz_offset[0] == '+' or tz_offset[0] == '-'):
+                    return timestamp, tz_offset
+                print(f"[WARN] Format de fuseau horaire non standard pour '{date_str}'. Tentative d'un autre format.")
+            except ValueError:
+                print(f"[WARN] Impossible de parser '{parts[0]}' comme un timestamp. Tentative d'un autre format.")
+        
+        try:
+            dt = datetime.strptime(date_str, "%a %b %d %H:%M:%S %Y %z")
+            timestamp = int(dt.timestamp())
+            tz_offset = date_str.strip().split()[-1] 
+            return timestamp, tz_offset
+        except ValueError:
+            raise ValueError(f"Format de date/heure invalide dans GIT_AUTHOR_DATE/GIT_COMMITTER_DATE: '{date_str}'. Formats supportés: 'timestamp timezone_offset' ou 'Jour Mois Jour HH:MM:SS Année DécalageTimeZone'.")
+
     now = datetime.now().astimezone()
     timestamp = int(now.timestamp())
-    timezone = now.strftime('%z')
-    return timestamp, timezone
+    tz_offset = now.strftime("%z")  # e.g. +0200
+    return timestamp, tz_offset

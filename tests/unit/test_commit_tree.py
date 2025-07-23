@@ -1,77 +1,95 @@
 import os
-import zlib
+import subprocess
 from pathlib import Path
-import json
+import pytest
 from typer.testing import CliRunner
-from git_scratch.main import app 
+from git_scratch.main import app
 
 runner = CliRunner()
 
-def test_commit_tree_creates_valid_commit_object(tmp_path, monkeypatch):
-    original_cwd = os.getcwd()
-    try:
-        os.chdir(tmp_path)
+@pytest.fixture
+def setup_repo_with_commit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    os.chdir(tmp_path)
+    subprocess.run(["git", "init"], check=True)
+    (tmp_path / "file.txt").write_text("hello\n")
+    subprocess.run(["git", "add", "file.txt"], check=True)
+    subprocess.run([
+        "git", "-c", "user.name=Alice", "-c", "user.email=alice@example.com",
+        "commit", "-m", "initial commit"
+    ], check=True)
 
-        monkeypatch.setenv("GIT_AUTHOR_NAME", "Alice Dev")
-        monkeypatch.setenv("GIT_AUTHOR_EMAIL", "alice@example.com")
+    # Fixer env pour pit avec même auteur/date
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Alice")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "alice@example.com")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Alice")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
+    monkeypatch.setenv("GIT_AUTHOR_DATE", "1700000000 +0000")
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "1700000000 +0000")
 
+    yield tmp_path
 
-        result_init = runner.invoke(app, ["init"])
-        assert result_init.exit_code == 0
+def parse_commit_content(content: str):
+    lines = content.splitlines()
+    data = {}
+    message_lines = []
+    in_message = False
 
-        # -- Créer un fichier et le hasher avec pit
-        file = tmp_path / "hello.txt"
-        file.write_text("Salut du test\n")
-        result_hash = runner.invoke(app, ["hash-object", str(file), "--write"])
-        assert result_hash.exit_code == 0
-        blob_oid = result_hash.stdout.strip()
+    for line in lines:
+        if in_message:
+            message_lines.append(line)
+        elif line == "":
+            in_message = True
+        else:
+            if line.startswith("tree "):
+                data["tree"] = line[len("tree "):]
+            elif line.startswith("parent "):
+                data["parent"] = line[len("parent "):]
+            elif line.startswith("author "):
+                author_info = " ".join(line.split(" ")[1:-2])
+                data["author"] = author_info
+            elif line.startswith("committer "):
+                committer_info = " ".join(line.split(" ")[1:-2])
+                data["committer"] = committer_info
 
-        # -- Créer un index.json minimal
-        index = [{
-            "path": "hello.txt",
-            "oid": blob_oid,
-            "mode": "100644"
-        }]
-        index_path = tmp_path / ".git" / "index.json"
-        # Utiliser json.dumps pour une conversion robuste en JSON
-        index_path.write_text(json.dumps(index))
+    data["message"] = "\n".join(message_lines).strip()
+    return data
 
+def test_commit_content_similarity(setup_repo_with_commit: Path):
+    tmp_path = setup_repo_with_commit
 
-        result_tree = runner.invoke(app, ["write-tree"])
-        assert result_tree.exit_code == 0
-        tree_oid = result_tree.stdout.strip()
-        if "Tree OID: " in tree_oid:
-            tree_oid = tree_oid.split("Tree OID: ")[1]
+    git_oid = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True
+    ).stdout.strip()
 
+    git_commit_content = subprocess.run(
+        ["git", "cat-file", "-p", git_oid],
+        capture_output=True, text=True, check=True
+    ).stdout
 
-        message = "Premier commit pit"
-        result_commit = runner.invoke(app, ["commit-tree", tree_oid, "-m", message])
-        assert result_commit.exit_code == 0
-        commit_oid = result_commit.stdout.strip()
+    tree_oid = subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"],
+        capture_output=True, text=True, check=True
+    ).stdout.strip()
 
+    result = runner.invoke(
+        app,
+        ["commit-tree", tree_oid, "-m", "initial commit"],
+        env=os.environ
+    )
+    assert result.exit_code == 0, f"Pit commit-tree failed: {result.stderr}"
+    pit_oid = result.stdout.strip()
 
-        obj_dir = tmp_path / ".git" / "objects" / commit_oid[:2]
-        obj_file = obj_dir / commit_oid[2:]
-        assert obj_file.exists(), f"Commit object {commit_oid} not written"
+    pit_commit_content = subprocess.run(
+        ["pit", "cat-file", "-p", pit_oid],
+        capture_output=True, text=True, check=True
+    ).stdout
 
-        # -- Décompresser et VÉRIFIER LE CONTENU DU COMMIT (en ignorant l'en-tête)
-        with open(obj_file, "rb") as f:
-            decompressed_full_content = zlib.decompress(f.read()).decode()
+    git_data = parse_commit_content(git_commit_content)
+    pit_data = parse_commit_content(pit_commit_content)
 
-        # Trouver la fin de l'en-tête (le premier caractère nul '\x00')
-        null_byte_index = decompressed_full_content.find('\x00')
-        assert null_byte_index != -1, "Could not find null byte separator in decompressed content"
-        
-        # Le contenu "pur" du commit commence après le caractère nul
-        commit_body = decompressed_full_content[null_byte_index + 1:]
-
-        # --- Assertions sur le corps du commit ---
-        # Remplacez content par commit_body dans vos assertions
-        assert commit_body.startswith("tree " + tree_oid), \
-            f"Expected commit body to start with 'tree {tree_oid}', but got: '{commit_body[:50]}...'"
-        assert f"author Alice Dev <alice@example.com>" in commit_body
-        assert f"committer Alice Dev <alice@example.com>" in commit_body
-        assert message in commit_body
-
-    finally:
-        os.chdir(original_cwd) 
+    assert git_data["tree"] == pit_data["tree"], "Tree OID mismatch"
+    assert git_data.get("parent") == pit_data.get("parent"), "Parent OID mismatch"
+    assert git_data["author"] == pit_data["author"], "Author info mismatch"
+    assert git_data["committer"] == pit_data["committer"], "Committer info mismatch"
+    assert git_data["message"] == pit_data["message"], "Commit message mismatch"

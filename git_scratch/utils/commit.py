@@ -10,25 +10,18 @@ def build_commit_object(
 ) -> str:
     """
     Construct and store a commit object.
-
-    Args:
-        tree_oid (str): OID of the associated tree.
-        message (str): Commit message.
-        parent_oid (Optional[str]): Parent commit OID, if any.
-
-    Returns:
-        str: The OID of the created commit object.
     """
     author_name, author_email = get_author_identity()
-    timestamp, timezone = get_timestamp_info()
+    author_timestamp, author_timezone = get_timestamp_info(is_committer=False)
+    committer_timestamp, committer_timezone = get_timestamp_info(is_committer=True)
 
     lines = [f"tree {tree_oid}"]
 
     if parent_oid:
         lines.append(f"parent {parent_oid}")
 
-    lines.append(f"author {author_name} <{author_email}> {timestamp} {timezone}")
-    lines.append(f"committer {author_name} <{author_email}> {timestamp} {timezone}")
+    lines.append(f"author {author_name} <{author_email}> {author_timestamp} {author_timezone}")
+    lines.append(f"committer {author_name} <{author_email}> {committer_timestamp} {committer_timezone}")
     lines.append("")
     lines.append(message)
 
