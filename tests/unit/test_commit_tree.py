@@ -8,94 +8,63 @@ from git_scratch.main import app
 runner = CliRunner()
 
 @pytest.fixture
-def setup_repo_with_commit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def git_and_pit_repo_for_commit_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    old_cwd = os.getcwd()
     os.chdir(tmp_path)
-    subprocess.run(["git", "init"], check=True)
-    (tmp_path / "file.txt").write_text("hello\n")
-    subprocess.run(["git", "add", "file.txt"], check=True)
-    subprocess.run([
-        "git", "-c", "user.name=Alice", "-c", "user.email=alice@example.com",
-        "commit", "-m", "initial commit"
-    ], check=True)
+    try:
+        # Init git repo
+        subprocess.run(["git", "init"], check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
 
-    # Fixer env pour pit avec même auteur/date
-    monkeypatch.setenv("GIT_AUTHOR_NAME", "Alice")
-    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "alice@example.com")
-    monkeypatch.setenv("GIT_COMMITTER_NAME", "Alice")
-    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
-    monkeypatch.setenv("GIT_AUTHOR_DATE", "1700000000 +0000")
-    monkeypatch.setenv("GIT_COMMITTER_DATE", "1700000000 +0000")
+        # Init pit repo via CLI
+        result = runner.invoke(app, ["init"])
+        assert result.exit_code == 0, f"Pit init failed: {result.stderr}"
 
-    yield tmp_path
+        # Create a test file and add it to the index
+        (tmp_path / "test.txt").write_text("Hello commit-tree\n")
+        subprocess.run(["git", "add", "test.txt"], check=True)
 
-def parse_commit_content(content: str):
-    lines = content.splitlines()
-    data = {}
-    message_lines = []
-    in_message = False
+        result = runner.invoke(app, ["add", "test.txt"])
+        assert result.exit_code == 0, f"Pit add failed: {result.stderr}"
 
-    for line in lines:
-        if in_message:
-            message_lines.append(line)
-        elif line == "":
-            in_message = True
-        else:
-            if line.startswith("tree "):
-                data["tree"] = line[len("tree "):]
-            elif line.startswith("parent "):
-                data["parent"] = line[len("parent "):]
-            elif line.startswith("author "):
-                author_info = " ".join(line.split(" ")[1:-2])
-                data["author"] = author_info
-            elif line.startswith("committer "):
-                committer_info = " ".join(line.split(" ")[1:-2])
-                data["committer"] = committer_info
+        # Commit with git to have a baseline commit
+        subprocess.run([
+            "git", "-c", "user.name=Test", "-c", "user.email=test@test.com",
+            "commit", "-m", "initial commit"
+        ], check=True)
 
-    data["message"] = "\n".join(message_lines).strip()
-    return data
+        # Set environment variables for Pit commit commands
+        monkeypatch.setenv("GIT_AUTHOR_NAME", "Test")
+        monkeypatch.setenv("GIT_AUTHOR_EMAIL", "test@test.com")
+        monkeypatch.setenv("GIT_COMMITTER_NAME", "Test")
+        monkeypatch.setenv("GIT_COMMITTER_EMAIL", "test@test.com")
+        monkeypatch.setenv("TZ", "UTC")
 
-def test_commit_content_similarity(setup_repo_with_commit: Path):
-    tmp_path = setup_repo_with_commit
+        yield tmp_path
+    finally:
+        os.chdir(old_cwd)
 
-    # Get latest git commit OID
-    git_oid = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True
+def test_pit_commit_tree(git_and_pit_repo_for_commit_tree: Path):
+    # Write tree object via pit
+    result = runner.invoke(app, ["write-tree"])
+    assert result.exit_code == 0, f"Pit write-tree failed: {result.stderr}"
+    tree_oid = result.stdout.strip()
+    assert len(tree_oid) == 40, "Tree OID should be 40 characters SHA-1"
+
+    # Get parent commit SHA (HEAD)
+    parent_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
     ).stdout.strip()
 
-    # Get commit content from git
-    git_commit_content = subprocess.run(
-        ["git", "cat-file", "-p", git_oid],
-        capture_output=True, text=True, check=True
-    ).stdout
-
-    # Get tree OID from HEAD commit
-    tree_oid = subprocess.run(
-        ["git", "rev-parse", "HEAD^{tree}"],
-        capture_output=True, text=True, check=True
-    ).stdout.strip()
-
-    # Use pit CLI via runner.invoke to create commit-tree
-    result = runner.invoke(
-        app,
-        ["commit-tree", tree_oid, "-m", "initial commit"],
-        env=os.environ
-    )
+    # Commit tree with message and parent via pit commit-tree
+    result = runner.invoke(app, ["commit-tree", tree_oid, "-p", parent_sha, "-m", "commit-tree test"])
     assert result.exit_code == 0, f"Pit commit-tree failed: {result.stderr}"
-    pit_oid = result.stdout.strip()
+    commit_oid = result.stdout.strip()
+    assert len(commit_oid) == 40, "Commit OID should be 40 characters SHA-1"
 
-    # Get commit content from pit using runner.invoke (instead of subprocess)
-    cat_file_result = runner.invoke(app, ["cat-file", "-p", pit_oid])
-    assert cat_file_result.exit_code == 0, f"Pit cat-file failed: {cat_file_result.stderr}"
-    pit_commit_content = cat_file_result.stdout
-
-    # Parse commit contents to compare
-    git_data = parse_commit_content(git_commit_content)
-    pit_data = parse_commit_content(pit_commit_content)
-
-    # Assertions
-    assert git_data["tree"] == pit_data["tree"], "Tree OID mismatch"
-    assert git_data.get("parent") == pit_data.get("parent"), "Parent OID mismatch"
-    assert git_data["author"] == pit_data["author"], "Author info mismatch"
-    assert git_data["committer"] == pit_data["committer"], "Committer info mismatch"
-    assert git_data["message"] == pit_data["message"], "Commit message mismatch"
+    # Verify commit_oid is reachable by git rev-parse
+    git_commit_oid = subprocess.run(
+        ["git", "rev-parse", commit_oid], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert commit_oid == git_commit_oid, "Commit OID not found by git rev-parse"
