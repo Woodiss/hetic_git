@@ -9,6 +9,9 @@ from git_scratch.commands.rmfile import rmfile
 from git_scratch.commands.rev_parse import rev_parse
 from git_scratch.commands.ls_tree import ls_tree
 from git_scratch.commands.commit_tree import commit_tree
+from git_scratch.commands.porcelain_commit import commit
+
+
 from git_scratch.commands.status import status
 from git_scratch.commands.log import log
 from git_scratch.commands.init import init
@@ -27,6 +30,9 @@ app.command("rev-parse")(rev_parse)
 app.command("show-ref")(show_ref)
 app.command("ls-tree")(ls_tree)
 app.command("commit-tree")(commit_tree)
+app.command("commit")(commit)
+
+
 app.command("status")(status)
 app.command("log")(log)
 app.command("reset")(reset)
