@@ -28,7 +28,7 @@ def _resolve_ref(ref: str) -> str:
         if head_content.startswith("ref: "):
             ref_path = Path(".git") / head_content[5:]
             return ref_path.read_text().strip()
-        return head_content  # SHA détaché
+        return head_content
 
     # Recherche dans refs/heads et refs/tags
     for cat in ("heads", "tags"):
@@ -75,10 +75,10 @@ def reset(
 
     if soft:
         mode = "soft"
-    elif mixed:
-        mode = "mixed"
     elif hard:
         mode = "hard"
+    elif mixed:
+        mode = "mixed"
     else:
         mode = "mixed"
 
