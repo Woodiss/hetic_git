@@ -13,6 +13,7 @@ from git_scratch.commands.status import status
 from git_scratch.commands.log import log
 from git_scratch.commands.init import init
 from git_scratch.commands.reset import reset
+from git_scratch.commands.checkout import checkout
 
 app = typer.Typer(help="Git from scratch in Python.")
 
@@ -30,6 +31,6 @@ app.command("commit-tree")(commit_tree)
 app.command("status")(status)
 app.command("log")(log)
 app.command("reset")(reset)
-
+app.command("checkout")(checkout)
 if __name__ == "__main__":
     app()
