@@ -76,7 +76,6 @@ def _entries_from_tree(tree_oid: str, base_path: str = "") -> List[dict]:
 
     return entries
 
-  # Example OID
 
 def _checkout_tree(tree_oid: str, dest_dir: str = ".") -> None:
     """Overwrite *dest_dir* with the blobs of *tree_oid* (tracked files only)."""
@@ -119,6 +118,3 @@ def reset(
         _checkout_tree(tree_oid)
 
     typer.echo(f"HEAD is now at {target_oid[:7]}  ({mode})")
-
-
-print(_entries_from_tree("76273146b6d01d6a68940935a3f445eebb324b32"))
