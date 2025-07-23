@@ -5,6 +5,8 @@ import typer
 import hashlib
 import pathspec
 from git_scratch.utils.index_utils import load_index, get_index_path
+from git_scratch.utils.gitignore_utils import load_gitignore_spec, is_ignored
+
 
 def git_hash_object(file_path):
     with open(file_path, "rb") as f:
@@ -40,6 +42,9 @@ def status():
         # On ignore les fichiers dans .gitignore
         if spec.match_file(file_path):
             continue
+        if is_ignored(file_path, spec):
+            continue
+
 
         if file_path in tracked_files:
             current_hash = git_hash_object(file_path)
