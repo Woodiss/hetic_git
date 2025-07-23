@@ -82,18 +82,16 @@ def reset(
     else:
         mode = "mixed"
 
-    # 1. Résolution de la référence
+    # soft
     target_oid = _resolve_ref(ref)
-
-    # 2. Mise à jour de HEAD
     update_head_to_commit(target_oid)
 
-    # 3. Index
+    # mixed
     tree_oid = _get_tree_oid(target_oid)
     if mode in {"mixed", "hard"}:
         save_index(entries_from_tree(tree_oid))
 
-    # 4. Working directory
+    # hard
     if mode == "hard":
         _checkout_tree(tree_oid)
 
