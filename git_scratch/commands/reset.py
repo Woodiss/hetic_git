@@ -7,6 +7,7 @@ import typer
 from git_scratch.utils.read_object import read_object
 from git_scratch.utils.porcelain_commit import update_head_to_commit
 from git_scratch.utils.index_utils import save_index
+from git_scratch.utils.tree_walker import entries_from_tree
 
 _HEX = set("0123456789abcdef")
 
@@ -51,35 +52,10 @@ def _get_tree_oid(commit_oid: str) -> str:
         raise typer.Exit(code=1)
     return first_line.split()[1]
 
-def _entries_from_tree(tree_oid: str, base_path: str = "") -> List[dict]:
-    """Walk *tree_oid* recursively and return index‑style dict entries."""
-    entries: List[dict] = []
-    obj_type, content = read_object(tree_oid)
-    if obj_type != "tree":
-        raise ValueError("Expected tree object")
-
-    i = 0
-    while i < len(content):
-        mode_end = content.find(b" ", i)
-        name_end = content.find(b"\x00", mode_end)
-        mode = content[i:mode_end].decode()
-        name = content[mode_end + 1 : name_end].decode()
-        oid_bytes = content[name_end + 1 : name_end + 21]
-        oid = oid_bytes.hex()
-        i = name_end + 21
-
-        rel_path = os.path.join(base_path, name)
-        if mode == "40000":  # subtree
-            entries.extend(_entries_from_tree(oid, rel_path))
-        else:
-            entries.append({"path": rel_path, "oid": oid, "mode": mode})
-
-    return entries
-
 
 def _checkout_tree(tree_oid: str, dest_dir: str = ".") -> None:
     """Overwrite *dest_dir* with the blobs of *tree_oid* (tracked files only)."""
-    for entry in _entries_from_tree(tree_oid):
+    for entry in entries_from_tree(tree_oid):
         file_path = Path(dest_dir) / entry["path"]
         file_path.parent.mkdir(parents=True, exist_ok=True)
         _, blob_content = read_object(entry["oid"])
@@ -90,17 +66,21 @@ def reset(
     ref: str = typer.Argument(..., help="Commit (SHA / ref) to reset to."),
     soft: bool = typer.Option(False, "--soft", help="Move HEAD only."),
     hard: bool = typer.Option(False, "--hard", help="Reset index and working tree."),
+    mixed: bool = typer.Option(False, "--mixed", help="Reset index only."),
 ):
     """Re‑implémentation minimaliste de `git reset`."""
     if soft and hard:
         typer.secho("Error: choose only one of --soft / --hard.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
-    mode = "mixed"
     if soft:
         mode = "soft"
+    elif mixed:
+        mode = "mixed"
     elif hard:
         mode = "hard"
+    else:
+        mode = "mixed"
 
     # 1. Résolution de la référence
     target_oid = _resolve_ref(ref)
@@ -111,7 +91,7 @@ def reset(
     # 3. Index
     tree_oid = _get_tree_oid(target_oid)
     if mode in {"mixed", "hard"}:
-        save_index(_entries_from_tree(tree_oid))
+        save_index(entries_from_tree(tree_oid))
 
     # 4. Working directory
     if mode == "hard":
