@@ -57,21 +57,25 @@ def parse_commit_content(content: str):
 def test_commit_content_similarity(setup_repo_with_commit: Path):
     tmp_path = setup_repo_with_commit
 
+    # Get latest git commit OID
     git_oid = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         capture_output=True, text=True, check=True
     ).stdout.strip()
 
+    # Get commit content from git
     git_commit_content = subprocess.run(
         ["git", "cat-file", "-p", git_oid],
         capture_output=True, text=True, check=True
     ).stdout
 
+    # Get tree OID from HEAD commit
     tree_oid = subprocess.run(
         ["git", "rev-parse", "HEAD^{tree}"],
         capture_output=True, text=True, check=True
     ).stdout.strip()
 
+    # Use pit CLI via runner.invoke to create commit-tree
     result = runner.invoke(
         app,
         ["commit-tree", tree_oid, "-m", "initial commit"],
@@ -80,14 +84,16 @@ def test_commit_content_similarity(setup_repo_with_commit: Path):
     assert result.exit_code == 0, f"Pit commit-tree failed: {result.stderr}"
     pit_oid = result.stdout.strip()
 
-    pit_commit_content = subprocess.run(
-        ["pit", "cat-file", "-p", pit_oid],
-        capture_output=True, text=True, check=True
-    ).stdout
+    # Get commit content from pit using runner.invoke (instead of subprocess)
+    cat_file_result = runner.invoke(app, ["cat-file", "-p", pit_oid])
+    assert cat_file_result.exit_code == 0, f"Pit cat-file failed: {cat_file_result.stderr}"
+    pit_commit_content = cat_file_result.stdout
 
+    # Parse commit contents to compare
     git_data = parse_commit_content(git_commit_content)
     pit_data = parse_commit_content(pit_commit_content)
 
+    # Assertions
     assert git_data["tree"] == pit_data["tree"], "Tree OID mismatch"
     assert git_data.get("parent") == pit_data.get("parent"), "Parent OID mismatch"
     assert git_data["author"] == pit_data["author"], "Author info mismatch"
