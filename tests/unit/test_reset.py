@@ -2,7 +2,6 @@ import subprocess
 from pathlib import Path
 from git_scratch.utils.tree_walker import entries_from_tree
 from git_scratch.commands.reset import _get_tree_oid
-from git_scratch.utils.index_utils import load_index
 
 # Create a temporary Git repository with two commits
 def init_test_repo(tmp_path: Path) -> tuple[Path, list[str]]:
